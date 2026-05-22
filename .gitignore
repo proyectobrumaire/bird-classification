@@ -1,0 +1,46 @@
+# Compilación de Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Entornos virtuales (por si creas uno luego como venv o .venv)
+venv/
+.venv/
+env/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+
+# Secretos y Credenciales de Google API (¡CRÍTICO!)
+client_secret.json
+token.json
+credentials.json
+.env
+
+# Modelos entrenados y archivos pesados (Binarios)
+*.pth
+*.pt
+*.h5
+*.pkl
+*.onnx
+
+# Datasets o imágenes de prueba (por si descargas carpetas de fotos para entrenar)
+dataset/
+data/
+images_test/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
