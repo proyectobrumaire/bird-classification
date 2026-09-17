@@ -26,15 +26,36 @@ resource "aws_s3_bucket_public_access_block" "brumaire" {
   restrict_public_buckets = true
 }
 
-# CSV único de clasificaciones — Lambda lo actualiza, Terraform lo crea vacío una sola vez
-resource "aws_s3_object" "species_map" {
-  bucket       = aws_s3_bucket.brumaire.id
-  key          = "classifications/species_map.csv"
-  content      = "filename,species,confidence,detector_score,x1,y1,x2,y2,timestamp\n"
-  content_type = "text/csv"
+# Retención: 1 año para fotos y logs (igual al TTL de DynamoDB); el modelo no expira
+resource "aws_s3_bucket_lifecycle_configuration" "brumaire" {
+  bucket = aws_s3_bucket.brumaire.id
 
-  lifecycle {
-    ignore_changes = [content, etag] # Lambda escribe aquí, Terraform no pisa
+  rule {
+    id     = "expire-images"
+    status = "Enabled"
+    filter {
+      prefix = "images/"
+    }
+    expiration {
+      days = 365
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+  }
+
+  rule {
+    id     = "expire-logs"
+    status = "Enabled"
+    filter {
+      prefix = "logs/"
+    }
+    expiration {
+      days = 365
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
   }
 }
 
@@ -50,7 +71,7 @@ resource "aws_s3_bucket_notification" "triggers" {
     filter_suffix       = ".jpg"
   }
 
-  # Log de app → procesador de métricas
+  # Log de app → procesador de sensores
   lambda_function {
     lambda_function_arn = aws_lambda_function.log_processor.arn
     events              = ["s3:ObjectCreated:*"]

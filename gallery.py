@@ -1,11 +1,9 @@
-import os, csv, json, re, boto3
-from datetime import datetime, timezone, timedelta, date as date_type
-from io import StringIO
+import os, json, re, boto3
+from datetime import datetime, timezone, timedelta
 
 s3         = boto3.client("s3")
 dynamodb   = boto3.client("dynamodb")
 BUCKET     = os.environ["BUCKET_NAME"]
-CSV_KEY    = os.environ["CSV_KEY"]
 SECRET     = os.environ["API_SECRET"]
 STATION    = os.environ.get("STATION_NAME", "brumaire-1")
 TABLE      = os.environ.get("DYNAMO_TABLE", "brumaire-telemetry")

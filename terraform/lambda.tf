@@ -28,11 +28,11 @@ resource "aws_ecr_lifecycle_policy" "classifier" {
   policy = jsonencode({
     rules = [{
       rulePriority = 1
-      description  = "Conservar solo las últimas 5 imágenes"
+      description  = "Conservar solo las últimas 2 imágenes"
       selection = {
         tagStatus   = "any"
         countType   = "imageCountMoreThan"
-        countNumber = 5
+        countNumber = 2
       }
       action = { type = "expire" }
     }]
@@ -113,7 +113,6 @@ resource "aws_lambda_function" "classifier" {
     variables = {
       BUCKET_NAME  = aws_s3_bucket.brumaire.id
       MODEL_KEY    = "models/bird_species_resnet18.pth"
-      CSV_KEY      = "classifications/species_map.csv"
       DYNAMO_TABLE = aws_dynamodb_table.telemetry.name
       STATION_NAME = "brumaire-1"
     }
@@ -205,7 +204,6 @@ resource "aws_lambda_function" "gallery" {
   environment {
     variables = {
       BUCKET_NAME  = aws_s3_bucket.brumaire.id
-      CSV_KEY      = "classifications/species_map.csv"
       API_SECRET   = random_password.presigner_secret.result
       STATION_NAME = "brumaire-1"
       DYNAMO_TABLE = aws_dynamodb_table.telemetry.name

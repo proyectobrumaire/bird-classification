@@ -1,9 +1,7 @@
 import os
 os.environ.setdefault("TORCH_HOME", "/tmp")  # torch hub cache → /tmp (Lambda read-only FS)
 import re
-import csv
 import boto3
-from io import StringIO
 from pathlib import Path
 from datetime import datetime, timezone
 from PIL import Image
@@ -20,12 +18,10 @@ from predict_image_from_tensors import load_species_model, classify_crops_batch,
 import torch
 
 s3          = boto3.client("s3")
-cloudwatch  = boto3.client("cloudwatch")
 dynamodb    = boto3.client("dynamodb")
 BUCKET      = os.environ["BUCKET_NAME"]
 STATION     = os.environ.get("STATION_NAME", "brumaire-1")
 MODEL_KEY   = os.environ["MODEL_KEY"]
-CSV_KEY     = os.environ["CSV_KEY"]
 TABLE       = os.environ.get("DYNAMO_TABLE", "brumaire-telemetry")
 MODEL_PATH  = "/tmp/model.pth"
 
@@ -105,27 +101,11 @@ def handler(event, context):
     annotated.save(pred_local)
     s3.upload_file(pred_local, BUCKET, f"{parent}/{stem}_pred.png")
 
-    _update_csv(filename, results, capture_ts)
-
     kept = [r for r in results if r["keep"]]
     for r in kept:
         print(f"DETECTION key={src_key} species={r['pred_species']} conf={r['pred_conf']:.2f}")
 
     if kept:
-        cloudwatch.put_metric_data(
-            Namespace="Brumaire",
-            MetricData=[{
-                "MetricName": "BirdDetection",
-                "Timestamp":  capture_ts,
-                "Value":      r["pred_conf"],
-                "Unit":       "None",
-                "Dimensions": [
-                    {"Name": "Station", "Value": STATION},
-                    {"Name": "Species", "Value": r["pred_species"]},
-                ],
-            } for r in kept],
-        )
-
         date_str  = capture_ts.strftime("%Y-%m-%d")
         image_key = f"{parent}/{stem}_pred.png"
         for r in kept:
@@ -145,32 +125,3 @@ def handler(event, context):
             })
 
     return {"statusCode": 200, "detections": len(kept)}
-
-
-def _update_csv(filename, results, capture_ts: datetime):
-    try:
-        obj      = s3.get_object(Bucket=BUCKET, Key=CSV_KEY)
-        existing = obj["Body"].read().decode("utf-8")
-    except s3.exceptions.NoSuchKey:
-        existing = "filename,species,confidence,detector_score,x1,y1,x2,y2,timestamp\n"
-
-    buf    = StringIO()
-    writer = csv.writer(buf)
-    ts_str = capture_ts.isoformat()
-
-    for r in results:
-        if not r["keep"]:
-            continue
-        x1, y1, x2, y2 = r["padded_box"]
-        writer.writerow([
-            filename,
-            r["pred_species"],
-            f"{r['pred_conf']:.4f}",
-            f"{r['detector_score']:.4f}",
-            x1, y1, x2, y2,
-            ts_str,
-        ])
-
-    combined = existing.rstrip("\n") + "\n" + buf.getvalue()
-    s3.put_object(Bucket=BUCKET, Key=CSV_KEY,
-                  Body=combined.encode("utf-8"), ContentType="text/csv")

@@ -40,16 +40,6 @@ resource "aws_iam_role_policy" "lambda_s3" {
   policy = data.aws_iam_policy_document.lambda_s3.json
 }
 
-data "aws_iam_policy_document" "lambda_cloudwatch_metrics" {
-  statement {
-    actions = [
-      "cloudwatch:PutMetricData",
-      "cloudwatch:GetMetricStatistics",
-    ]
-    resources = ["*"]
-  }
-}
-
 data "aws_iam_policy_document" "lambda_dynamodb" {
   statement {
     actions = [
@@ -65,10 +55,4 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
   name   = "brumaire-lambda-dynamodb"
   role   = aws_iam_role.lambda_exec.id
   policy = data.aws_iam_policy_document.lambda_dynamodb.json
-}
-
-resource "aws_iam_role_policy" "lambda_cloudwatch" {
-  name   = "brumaire-lambda-cloudwatch"
-  role   = aws_iam_role.lambda_exec.id
-  policy = data.aws_iam_policy_document.lambda_cloudwatch_metrics.json
 }

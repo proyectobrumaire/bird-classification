@@ -1,7 +1,7 @@
 FROM public.ecr.aws/lambda/python:3.11
 
-# gcc necesario para compilar numpy 1.x (la imagen Lambda no lo trae)
-RUN yum install -y gcc gcc-c++ && yum clean all
+# gcc necesario para compilar numpy 1.x; zlib/libjpeg-devel para compilar Pillow desde código fuente
+RUN yum install -y gcc gcc-c++ zlib-devel libjpeg-turbo-devel && yum clean all
 
 # numpy<2 usa setuptools clásico (solo necesita gcc, no Meson)
 RUN pip install --no-cache-dir "numpy<2" Pillow tqdm boto3

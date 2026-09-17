@@ -4,18 +4,11 @@ import boto3
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 
-cloudwatch = boto3.client("cloudwatch")
 dynamodb   = boto3.client("dynamodb")
 s3         = boto3.client("s3")
 
-NAMESPACE   = "Brumaire"
 STATION     = os.environ.get("STATION_NAME", "brumaire-1")
 TABLE       = os.environ.get("DYNAMO_TABLE", "brumaire-telemetry")
-
-UNITS = {
-    "H1_K": "Percent", "H2_K": "Percent",
-    "P2_K": "Percent",
-}
 
 # TTL: 1 año en segundos
 TTL_SECS = 365 * 24 * 3600
@@ -29,51 +22,21 @@ def handler(event, context):
     obj     = s3.get_object(Bucket=bucket, Key=key)
     entries = json.loads(obj["Body"].read()).get("entries", [])
 
-    cw_data       = []                          # para CloudWatch (igual que antes)
     sensor_groups = defaultdict(dict)           # {ts_iso: {sensor_key: value}}
-    events        = []                          # [(ts, event_name)]
 
     for entry in entries:
         if not entry.get("timestamp_valid", True):
             continue
-        ts    = _parse_ts(entry.get("timestamp"))
-        etype = entry.get("type")
+        if entry.get("type") != "sensorData":
+            continue
 
-        if etype == "sensorData":
-            skey = entry.get("sensor_key")
-            sval = entry.get("sensor_value")
-            if skey and sval is not None:
-                # CloudWatch
-                cw_data.append({
-                    "MetricName": skey,
-                    "Value":      float(sval),
-                    "Timestamp":  ts,
-                    "Unit":       UNITS.get(skey, "None"),
-                    "Dimensions": [{"Name": "Station", "Value": STATION}],
-                })
-                # DynamoDB: agrupar por timestamp para un item por lectura periódica
-                sensor_groups[ts.isoformat()][skey] = str(sval)
+        ts   = _parse_ts(entry.get("timestamp"))
+        skey = entry.get("sensor_key")
+        sval = entry.get("sensor_value")
+        if skey and sval is not None:
+            # Agrupar por timestamp para un item por lectura periódica
+            sensor_groups[ts.isoformat()][skey] = str(sval)
 
-        elif etype == "event":
-            event_name = entry.get("event")
-            if event_name:
-                cw_data.append({
-                    "MetricName": "Event",
-                    "Value":      1,
-                    "Timestamp":  ts,
-                    "Unit":       "Count",
-                    "Dimensions": [
-                        {"Name": "Station", "Value": STATION},
-                        {"Name": "Type",    "Value": event_name},
-                    ],
-                })
-                events.append((ts, event_name))
-
-    # ── CloudWatch (sin cambios) ──────────────────────────────────────────
-    for i in range(0, len(cw_data), 20):
-        cloudwatch.put_metric_data(Namespace=NAMESPACE, MetricData=cw_data[i:i + 20])
-
-    # ── DynamoDB ──────────────────────────────────────────────────────────
     # Un item por grupo de sensores (= una lectura periódica)
     for ts_iso, sensors in sensor_groups.items():
         ts_dt    = datetime.fromisoformat(ts_iso)
@@ -88,19 +51,8 @@ def handler(event, context):
             item[k] = {"N": v}
         dynamodb.put_item(TableName=TABLE, Item=item)
 
-    # Un item por evento
-    for ts_dt, event_name in events:
-        date_str = ts_dt.strftime("%Y-%m-%d")
-        dynamodb.put_item(TableName=TABLE, Item={
-            "pk":         {"S": f"{STATION}#{date_str}"},
-            "sk":         {"S": f"{ts_dt.isoformat()}#event#{event_name}"},
-            "type":       {"S": "event"},
-            "event":      {"S": event_name},
-            "expires_at": {"N": str(int(ts_dt.timestamp()) + TTL_SECS)},
-        })
-
-    print(f"METRICS key={key} cw={len(cw_data)} sensor_groups={len(sensor_groups)} events={len(events)}")
-    return {"statusCode": 200, "metrics": len(cw_data)}
+    print(f"SENSOR_GROUPS key={key} sensor_groups={len(sensor_groups)}")
+    return {"statusCode": 200, "sensor_groups": len(sensor_groups)}
 
 
 RTC_UTC_OFFSET_H = int(os.environ.get("RTC_UTC_OFFSET_H", "0"))
