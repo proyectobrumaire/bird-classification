@@ -2,9 +2,6 @@ import torch
 from torchvision import transforms
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights, maskrcnn_resnet50_fpn, MaskRCNN_ResNet50_FPN_Weights
 from pathlib import Path
-import tkinter as tk
-from tkinter import filedialog
-import matplotlib.pyplot as plt
 from typing import List, Tuple
 from PIL import Image
 from utils_crop_segmentation import apply_mask_to_crop
@@ -14,6 +11,8 @@ def pick_file_dialog():
     Open a file dialog to choose an image interactively.
     Returns a Path or None if the user cancels.
     """
+    import tkinter as tk
+    from tkinter import filedialog
     root = tk.Tk()
     root.withdraw()
     filename = filedialog.askopenfilename(

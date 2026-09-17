@@ -44,3 +44,20 @@ images_test/
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
+
+# Terraform (state contiene secretos en texto plano, .terraform es cache local)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Artefactos de build de las Lambdas (se regeneran con terraform apply)
+terraform/.build/
