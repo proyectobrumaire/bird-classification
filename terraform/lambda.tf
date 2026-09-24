@@ -111,10 +111,11 @@ resource "aws_lambda_function" "classifier" {
 
   environment {
     variables = {
-      BUCKET_NAME  = aws_s3_bucket.brumaire.id
-      MODEL_KEY    = "models/bird_species_resnet18.pth"
-      DYNAMO_TABLE = aws_dynamodb_table.telemetry.name
-      STATION_NAME = "brumaire-1"
+      BUCKET_NAME      = aws_s3_bucket.brumaire.id
+      MODEL_KEY        = "models/bird_species_resnet18.pth"
+      DYNAMO_TABLE     = aws_dynamodb_table.telemetry.name
+      STATION_NAME     = "brumaire-1"
+      RTC_UTC_OFFSET_H = var.rtc_utc_offset_h
     }
   }
 
@@ -203,10 +204,11 @@ resource "aws_lambda_function" "gallery" {
 
   environment {
     variables = {
-      BUCKET_NAME  = aws_s3_bucket.brumaire.id
-      API_SECRET   = random_password.presigner_secret.result
-      STATION_NAME = "brumaire-1"
-      DYNAMO_TABLE = aws_dynamodb_table.telemetry.name
+      BUCKET_NAME      = aws_s3_bucket.brumaire.id
+      API_SECRET       = random_password.presigner_secret.result
+      STATION_NAME     = "brumaire-1"
+      DYNAMO_TABLE     = aws_dynamodb_table.telemetry.name
+      RTC_UTC_OFFSET_H = var.rtc_utc_offset_h
     }
   }
 }

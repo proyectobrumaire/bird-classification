@@ -8,6 +8,7 @@ SECRET     = os.environ["API_SECRET"]
 STATION    = os.environ.get("STATION_NAME", "brumaire-1")
 TABLE      = os.environ.get("DYNAMO_TABLE", "brumaire-telemetry")
 PRESIGN_TTL = 3600
+RTC_UTC_OFFSET_H = int(os.environ.get("RTC_UTC_OFFSET_H", "0"))
 
 
 def handler(event, context):
@@ -146,7 +147,8 @@ def _ts_from_filename(filename: str) -> datetime:
     if not m:
         raise ValueError(f"No timestamp in filename: {filename}")
     yy, mo, dd, hh, mi, ss = (int(x) for x in m.groups())
-    return datetime(2000 + yy, mo, dd, hh, mi, ss, tzinfo=timezone.utc)
+    tz_local = timezone(timedelta(hours=RTC_UTC_OFFSET_H))
+    return datetime(2000 + yy, mo, dd, hh, mi, ss, tzinfo=tz_local).astimezone(timezone.utc)
 
 
 def _processed_key(filename: str) -> str:

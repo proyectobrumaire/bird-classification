@@ -3,7 +3,7 @@ os.environ.setdefault("TORCH_HOME", "/tmp")  # torch hub cache → /tmp (Lambda 
 import re
 import boto3
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from PIL import Image
 
 # Pipeline existente — no se modifican esos archivos
@@ -27,6 +27,9 @@ MODEL_PATH  = "/tmp/model.pth"
 
 TTL_SECS = 365 * 24 * 3600
 
+# El RTC guarda hora local de la estación (la app lo sincroniza con la hora del teléfono)
+RTC_UTC_OFFSET_H = int(os.environ.get("RTC_UTC_OFFSET_H", "0"))
+
 # filename del ESP32: image_26-05-23T14-30-22_0.jpg
 _TS_RE = re.compile(r"(\d{2})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})")
 
@@ -36,7 +39,8 @@ def _capture_ts(filename: str) -> datetime:
     if not m:
         return datetime.now(timezone.utc)
     yy, mo, dd, hh, mi, ss = (int(x) for x in m.groups())
-    return datetime(2000 + yy, mo, dd, hh, mi, ss, tzinfo=timezone.utc)
+    tz_local = timezone(timedelta(hours=RTC_UTC_OFFSET_H))
+    return datetime(2000 + yy, mo, dd, hh, mi, ss, tzinfo=tz_local).astimezone(timezone.utc)
 
 
 # Cargados una vez por instancia Lambda (warm start)
@@ -108,11 +112,12 @@ def handler(event, context):
     if kept:
         date_str  = capture_ts.strftime("%Y-%m-%d")
         image_key = f"{parent}/{stem}_pred.png"
-        for r in kept:
+        for i, r in enumerate(kept):
             x1, y1, x2, y2 = r["padded_box"]
             dynamodb.put_item(TableName=TABLE, Item={
                 "pk":             {"S": f"{STATION}#{date_str}"},
-                "sk":             {"S": f"{capture_ts.isoformat()}#bird#{filename}"},
+                # índice i: varias aves en la misma foto no deben sobrescribirse
+                "sk":             {"S": f"{capture_ts.isoformat()}#bird#{filename}#{i}"},
                 "type":           {"S": "bird"},
                 "filename":       {"S": filename},
                 "species":        {"S": r["pred_species"]},

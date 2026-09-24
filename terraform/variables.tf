@@ -13,6 +13,6 @@ variable "bucket_name" {
 variable "rtc_utc_offset_h" {
   description = "Offset horario del RTC respecto a UTC (2 = Francia/CEST, -5 = Colombia)"
   type        = number
-  default     = 2
+  default     = -5
 }
 
