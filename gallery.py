@@ -44,10 +44,11 @@ def handler(event, context):
 
         if kind == "sensor":
             ts = _parse_sk_ts(sk)
+            # Todas las claves de sensor del ítem (atributos numéricos *_K)
             readings = {
-                k: float(item[k]["N"])
-                for k in ("T1_K", "H1_K", "P1_K", "P2_K", "W1_K", "H2_K")
-                if k in item
+                k: float(v["N"])
+                for k, v in item.items()
+                if k.endswith("_K") and "N" in v
             }
             sensor_ts.append((ts, readings))
 
