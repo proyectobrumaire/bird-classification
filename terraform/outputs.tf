@@ -28,3 +28,13 @@ output "gallery_url" {
   description = "Endpoint galería: POST /gallery con x-api-key y body {from, to, species?}"
   value       = "${aws_apigatewayv2_stage.presigner.invoke_url}gallery"
 }
+
+output "photos_url" {
+  description = "Endpoint fotos: POST /photos con x-api-key y body {from, to}"
+  value       = "${aws_apigatewayv2_stage.presigner.invoke_url}photos"
+}
+
+output "events_url" {
+  description = "Endpoint eventos: POST /events con x-api-key y body {from, to, types?}"
+  value       = "${aws_apigatewayv2_stage.presigner.invoke_url}events"
+}

@@ -103,15 +103,17 @@ def handler(event, context):
     annotated  = annotate_full_image(pil_img, results)
     pred_local = f"/tmp/{stem}_pred.png"
     annotated.save(pred_local)
-    s3.upload_file(pred_local, BUCKET, f"{parent}/{stem}_pred.png")
+
+    image_key = f"{parent}/{stem}_pred.png"
+    s3.upload_file(pred_local, BUCKET, image_key)
 
     kept = [r for r in results if r["keep"]]
     for r in kept:
         print(f"DETECTION key={src_key} species={r['pred_species']} conf={r['pred_conf']:.2f}")
 
+    date_str = capture_ts.strftime("%Y-%m-%d")
+
     if kept:
-        date_str  = capture_ts.strftime("%Y-%m-%d")
-        image_key = f"{parent}/{stem}_pred.png"
         for i, r in enumerate(kept):
             x1, y1, x2, y2 = r["padded_box"]
             dynamodb.put_item(TableName=TABLE, Item={
@@ -129,4 +131,24 @@ def handler(event, context):
                 "expires_at":     {"N": str(int(capture_ts.timestamp()) + TTL_SECS)},
             })
 
+    # Un ítem por foto (con o sin aves) para el endpoint /photos
+    dynamodb.put_item(TableName=TABLE, Item=_photo_item(
+        capture_ts, filename, src_key, image_key, len(kept),
+    ))
+
     return {"statusCode": 200, "detections": len(kept)}
+
+
+def _photo_item(capture_ts: datetime, filename: str, raw_key: str,
+                image_key: str, n_detections: int) -> dict:
+    """Ítem `<iso UTC>#photo#<filename>` (put_item → idempotente al reprocesar)."""
+    return {
+        "pk":           {"S": f"{STATION}#{capture_ts.strftime('%Y-%m-%d')}"},
+        "sk":           {"S": f"{capture_ts.isoformat()}#photo#{filename}"},
+        "type":         {"S": "photo"},
+        "filename":     {"S": filename},
+        "raw_key":      {"S": raw_key},
+        "image_key":    {"S": image_key},
+        "n_detections": {"N": str(n_detections)},
+        "expires_at":   {"N": str(int(capture_ts.timestamp()) + TTL_SECS)},
+    }

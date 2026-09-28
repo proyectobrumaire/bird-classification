@@ -277,3 +277,17 @@ resource "aws_lambda_permission" "gallery_apigw" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.presigner.execution_arn}/*/*"
 }
+
+# /photos y /events los atiende la misma Lambda gallery (despacha por routeKey);
+# el permiso gallery_apigw (/*/*) ya cubre estas rutas.
+resource "aws_apigatewayv2_route" "photos" {
+  api_id    = aws_apigatewayv2_api.presigner.id
+  route_key = "POST /photos"
+  target    = "integrations/${aws_apigatewayv2_integration.gallery.id}"
+}
+
+resource "aws_apigatewayv2_route" "events" {
+  api_id    = aws_apigatewayv2_api.presigner.id
+  route_key = "POST /events"
+  target    = "integrations/${aws_apigatewayv2_integration.gallery.id}"
+}

@@ -44,6 +44,7 @@ data "aws_iam_policy_document" "lambda_dynamodb" {
   statement {
     actions = [
       "dynamodb:PutItem",
+      "dynamodb:UpdateItem", # log_processor combina lecturas/eventos de varios batches
       "dynamodb:Query",
       "dynamodb:GetItem",
     ]
