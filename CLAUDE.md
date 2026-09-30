@@ -28,6 +28,12 @@ Código, comentarios y commits en español.
 - El RTC de la estación guarda **hora local** (la app lo sincroniza con el teléfono). `RTC_UTC_OFFSET_H` (default **−5**, Colombia) se pasa a `classifier`, `log_processor` y `gallery`, que convierten a UTC.
 - Los datos anteriores al 2026-09-24 quedaron con la hora corrida (sensores 7 h, detecciones 5 h); no se han migrado. Ojo: reprocesarlos con la migración crea ítems `sensor` nuevos en la hora correcta sin borrar los viejos.
 
+## Semántica de los sensores (cambios en los datos)
+
+- Desde 2026-09-30, `P1_K` es el **punto de rocío real**; antes era rocío − 5 °C. Comparar datos de antes y después con cuidado.
+- Desde 2026-09-30 existe `L1_K` (lluvia): **booleano** 1 = agua presente, 0 = seco; es el último estado, no un promedio. No requiere cambios en la nube (se maneja como cualquier `*_K`).
+- Los eventos BIRD se guardan en `events` como el resto; `/events` los devuelve si se piden.
+
 ## Despliegue
 
 - `cd terraform && terraform plan && terraform apply` (estado remoto en S3, cuenta 773151223594). Revisar el plan antes de aplicar.
